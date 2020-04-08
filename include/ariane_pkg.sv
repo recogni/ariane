@@ -32,6 +32,13 @@ package ariane_pkg;
     // within Ariane add a field here and assign a default value to the config. Please make
     // sure to add a propper parameter check to the `check_cfg` function.
     localparam NrMaxRules = 16;
+    
+    typedef struct packed {
+        int unsigned LineWidth;
+        int unsigned SetAssoc;
+        int unsigned IndexWidth;
+        int unsigned TagWidth;
+    } cache_cfg_t;
 
     typedef struct packed {
       int                               RASDepth;
@@ -50,32 +57,11 @@ package ariane_pkg;
       // cache config
       bit                               Axi64BitCompliant;     // set to 1 when using in conjunction with 64bit AXI bus adapter
       bit                               SwapEndianess;         // set to 1 to swap endianess inside L1.5 openpiton adapter
+      cache_cfg_t                       ICache;
+      cache_cfg_t                       DCache;
       //
       logic [63:0]                      DmBaseAddress;         // offset of the debug module
     } ariane_cfg_t;
-
-    localparam ariane_cfg_t ArianeDefaultConfig = '{
-      RASDepth: 2,
-      BTBEntries: 32,
-      BHTEntries: 128,
-      // idempotent region
-      NrNonIdempotentRules: 2,
-      NonIdempotentAddrBase: {64'b0, 64'b0},
-      NonIdempotentLength:   {64'b0, 64'b0},
-      NrExecuteRegionRules: 3,
-      //                      DRAM,          Boot ROM,   Debug Module
-      ExecuteRegionAddrBase: {64'h8000_0000, 64'h1_0000, 64'h0},
-      ExecuteRegionLength:   {64'h40000000,  64'h10000,  64'h1000},
-      // cached region
-      NrCachedRegionRules:    1,
-      CachedRegionAddrBase:  {64'h8000_0000},
-      CachedRegionLength:    {64'h40000000},
-      //  cache config
-      Axi64BitCompliant:      1'b1,
-      SwapEndianess:          1'b0,
-      // debug
-      DmBaseAddress:          64'h0
-    };
 
     // Function being called to check parameters
     function automatic void check_cfg (ariane_cfg_t Cfg);
@@ -822,4 +808,36 @@ package ariane_pkg;
             default:     return 2'b11;
         endcase
     endfunction
+
+    localparam ariane_cfg_t ArianeDefaultConfig = '{
+      RASDepth: 2,
+      BTBEntries: 32,
+      BHTEntries: 128,
+      // idempotent region
+      NrNonIdempotentRules: 2,
+      NonIdempotentAddrBase: {64'b0, 64'b0},
+      NonIdempotentLength:   {64'b0, 64'b0},
+      NrExecuteRegionRules: 3,
+      //                      DRAM,          Boot ROM,   Debug Module
+      ExecuteRegionAddrBase: {64'h8000_0000, 64'h1_0000, 64'h0},
+      ExecuteRegionLength:   {64'h40000000,  64'h10000,  64'h1000},
+      // cached region
+      NrCachedRegionRules:    1,
+      CachedRegionAddrBase:  {64'h8000_0000},
+      CachedRegionLength:    {64'h40000000},
+      //  cache config
+      Axi64BitCompliant:      1'b1,
+      SwapEndianess:          1'b0,
+      ICache:                 '{ LineWidth:  ICACHE_LINE_WIDTH, 
+                                 SetAssoc:   ICACHE_SET_ASSOC, 
+                                 IndexWidth: ICACHE_INDEX_WIDTH, 
+                                 TagWidth:   ICACHE_TAG_WIDTH},
+      DCache:                 '{ LineWidth:  DCACHE_LINE_WIDTH, 
+                                 SetAssoc:   DCACHE_SET_ASSOC, 
+                                 IndexWidth: DCACHE_INDEX_WIDTH, 
+                                 TagWidth:   DCACHE_TAG_WIDTH },
+      // debug
+      DmBaseAddress:          64'h0
+    };
+
 endpackage

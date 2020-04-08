@@ -18,7 +18,8 @@ import ariane_pkg::*;
 import std_cache_pkg::*;
 
 module std_cache_subsystem #(
-  parameter logic [63:0] CACHE_START_ADDR = 64'h4000_0000
+   parameter ariane_pkg::ariane_cfg_t Config = ariane_pkg::ArianeDefaultConfig,
+   parameter logic [63:0] CACHE_START_ADDR = 64'h4000_0000
 ) (
     input logic                            clk_i,
     input logic                            rst_ni,
@@ -60,7 +61,7 @@ module std_cache_subsystem #(
     ariane_axi::req_t  axi_req_data;
     ariane_axi::resp_t axi_resp_data;
 
-    std_icache i_icache (
+    std_icache #(.Config(Config.ICache)) i_icache (
         .clk_i      ( clk_i                 ),
         .rst_ni     ( rst_ni                ),
         .priv_lvl_i ( priv_lvl_i            ),
@@ -80,7 +81,8 @@ module std_cache_subsystem #(
    // Port 1: Load Unit
    // Port 2: Store Unit
    std_nbdcache #(
-      .CACHE_START_ADDR ( CACHE_START_ADDR )
+      .Config(Config.DCache),
+      .CACHE_START_ADDR( CACHE_START_ADDR )
    ) i_nbdcache (
       .clk_i,
       .rst_ni,

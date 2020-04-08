@@ -16,7 +16,9 @@
 import ariane_pkg::*;
 import std_cache_pkg::*;
 
-module std_icache (
+module std_icache #(
+  parameter ariane_pkg::cache_cfg_t Config
+)(
     input  logic                     clk_i,
     input  logic                     rst_ni,
     input riscv::priv_lvl_t          priv_lvl_i,
@@ -35,9 +37,9 @@ module std_icache (
     input  ariane_axi::resp_t        axi_resp_i
 );
 
-    localparam int unsigned ICACHE_BYTE_OFFSET = $clog2(ICACHE_LINE_WIDTH/8); // 3
-    localparam int unsigned ICACHE_NUM_WORD    = 2**(ICACHE_INDEX_WIDTH - ICACHE_BYTE_OFFSET);
-    localparam int unsigned NR_AXI_REFILLS     = ($clog2(ICACHE_LINE_WIDTH/64) == 0) ? 1 : $clog2(ICACHE_LINE_WIDTH/64);
+    localparam int unsigned ICACHE_BYTE_OFFSET = $clog2(Config.LineWidth/8); // 3
+    localparam int unsigned ICACHE_NUM_WORD    = 2**(Config.IndexWidth - ICACHE_BYTE_OFFSET);
+    localparam int unsigned NR_AXI_REFILLS     = ($clog2(Config.LineWidth/64) == 0) ? 1 : $clog2(Config.LineWidth/64);
     // registers
     enum logic [3:0] { FLUSH, IDLE, TAG_CMP, WAIT_AXI_R_RESP, WAIT_KILLED_REFILL, WAIT_KILLED_AXI_R_RESP,
                        REDO_REQ, TAG_CMP_SAVED, REFILL,
@@ -46,42 +48,42 @@ module std_icache (
     logic [$clog2(ICACHE_NUM_WORD)-1:0]     cnt_d, cnt_q;
     logic [NR_AXI_REFILLS-1:0]              burst_cnt_d, burst_cnt_q; // counter for AXI transfers
     logic [63:0]                            vaddr_d, vaddr_q;
-    logic [ICACHE_TAG_WIDTH-1:0]            tag_d, tag_q;
-    logic [ICACHE_SET_ASSOC-1:0]            evict_way_d, evict_way_q;
+    logic [Config.TagWidth-1:0]             tag_d, tag_q;
+    logic [Config.SetAssoc-1:0]             evict_way_d, evict_way_q;
     logic                                   flushing_d, flushing_q;
 
     // signals
-    logic [ICACHE_SET_ASSOC-1:0]          req;           // request to data memory
-    logic [ICACHE_SET_ASSOC-1:0]          vld_req;       // request to valid/tag memory
-    logic [(ICACHE_LINE_WIDTH+7)/8-1:0]   data_be;       // byte enable for data memory
+    logic [Config.SetAssoc-1:0]           req;           // request to data memory
+    logic [Config.SetAssoc-1:0]           vld_req;       // request to valid/tag memory
+    logic [(Config.LineWidth+7)/8-1:0]    data_be;       // byte enable for data memory
     logic [(2**NR_AXI_REFILLS-1):0][7:0]  be;            // byte enable
     logic [$clog2(ICACHE_NUM_WORD)-1:0]   addr;          // this is a cache-line address, to memory array
     logic                                 we;            // write enable to memory array
-    logic [ICACHE_SET_ASSOC-1:0]          hit;           // hit from tag compare
+    logic [Config.SetAssoc-1:0]           hit;           // hit from tag compare
     logic [$clog2(ICACHE_NUM_WORD)-1:0]   idx;           // index in cache line
     logic                                 update_lfsr;   // shift the LFSR
-    logic [ICACHE_SET_ASSOC-1:0]          random_way;    // random way select from LFSR
-    logic [ICACHE_SET_ASSOC-1:0]          way_valid;     // bit string which contains the zapped valid bits
-    logic [$clog2(ICACHE_SET_ASSOC)-1:0]  repl_invalid;  // first non-valid encountered
+    logic [Config.SetAssoc-1:0]           random_way;    // random way select from LFSR
+    logic [Config.SetAssoc-1:0]           way_valid;     // bit string which contains the zapped valid bits
+    logic [$clog2(Config.SetAssoc)-1:0]   repl_invalid;  // first non-valid encountered
     logic                                 repl_w_random; // we need to switch repl strategy since all are valid
-    logic [ICACHE_TAG_WIDTH-1:0]          tag;           // tag to do comparison with
+    logic [Config.TagWidth-1:0]           tag;           // tag to do comparison with
 
     // tag + valid bit read/write data
     struct packed {
         logic                 valid;
-        logic [ICACHE_TAG_WIDTH-1:0] tag;
-    } tag_rdata [ICACHE_SET_ASSOC-1:0], tag_wdata;
+        logic [Config.TagWidth-1:0] tag;
+    } tag_rdata [Config.SetAssoc-1:0], tag_wdata;
 
-    logic [ICACHE_LINE_WIDTH-1:0] data_rdata [ICACHE_SET_ASSOC-1:0], data_wdata;
+    logic [Config.LineWidth-1:0] data_rdata [Config.SetAssoc-1:0], data_wdata;
     logic [(2**NR_AXI_REFILLS-1):0][63:0] wdata;
 
-    for (genvar i = 0; i < ICACHE_SET_ASSOC; i++) begin : sram_block
+    for (genvar i = 0; i < Config.SetAssoc; i++) begin : sram_block
         // ------------
         // Tag RAM
         // ------------
         sram #(
             // tag + valid bit
-            .DATA_WIDTH ( ICACHE_TAG_WIDTH + 1   ),
+            .DATA_WIDTH ( Config.TagWidth + 1 ),
             .NUM_WORDS  ( ICACHE_NUM_WORD )
         ) tag_sram (
             .clk_i     ( clk_i            ),
@@ -97,7 +99,7 @@ module std_icache (
         // Data RAM
         // ------------
         sram #(
-            .DATA_WIDTH ( ICACHE_LINE_WIDTH ),
+            .DATA_WIDTH ( Config.LineWidth  ),
             .NUM_WORDS  ( ICACHE_NUM_WORD   )
         ) data_sram (
             .clk_i     ( clk_i              ),
@@ -116,12 +118,12 @@ module std_icache (
     // --------------------
 
     // cacheline selected by hit
-    logic [ICACHE_SET_ASSOC-1:0][FETCH_WIDTH-1:0] cl_sel;
+    logic [Config.SetAssoc-1:0][FETCH_WIDTH-1:0] cl_sel;
 
     assign idx = vaddr_q[ICACHE_BYTE_OFFSET-1:2];
 
     generate
-        for (genvar i = 0; i < ICACHE_SET_ASSOC; i++) begin : g_tag_cmpsel
+        for (genvar i = 0; i < Config.SetAssoc; i++) begin : g_tag_cmpsel
             assign hit[i] = (tag_rdata[i].tag == tag) ? tag_rdata[i].valid : 1'b0;
             assign cl_sel[i] = (hit[i]) ? data_rdata[i][{idx, 5'b0} +: FETCH_WIDTH] : '0;
             assign way_valid[i] = tag_rdata[i].valid;
@@ -131,7 +133,7 @@ module std_icache (
     // OR reduction of selected cachelines
     always_comb begin : p_reduction
         dreq_o.data = cl_sel[0];
-        for(int i = 1; i < ICACHE_SET_ASSOC; i++)
+        for(int i = 1; i < Config.SetAssoc; i++)
             dreq_o.data |= cl_sel[i];
     end
 
@@ -175,7 +177,7 @@ module std_icache (
 
     assign dreq_o.ex = areq_i.fetch_exception;
 
-    assign addr = (state_q==FLUSH) ? cnt_q : vaddr_d[ICACHE_INDEX_WIDTH-1:ICACHE_BYTE_OFFSET];
+    assign addr = (state_q==FLUSH) ? cnt_q : vaddr_d[Config.IndexWidth-1:ICACHE_BYTE_OFFSET];
 
     // ------------------
     // Cache Ctrl
@@ -201,7 +203,7 @@ module std_icache (
         wdata        = '0;
         tag_wdata    = '0;
         dreq_o.ready = 1'b0;
-        tag          = areq_i.fetch_paddr[ICACHE_TAG_WIDTH+ICACHE_INDEX_WIDTH-1:ICACHE_INDEX_WIDTH];
+        tag          = areq_i.fetch_paddr[Config.TagWidth+Config.IndexWidth-1:Config.IndexWidth];
         dreq_o.valid = 1'b0;
         update_lfsr  = 1'b0;
         miss_o       = 1'b0;
@@ -273,7 +275,7 @@ module std_icache (
                     // hit gonna be zero in most cases except for when the cache is disabled
                     evict_way_d = hit;
                     // save tag
-                    tag_d       = areq_i.fetch_paddr[ICACHE_TAG_WIDTH+ICACHE_INDEX_WIDTH-1:ICACHE_INDEX_WIDTH];
+                    tag_d       = areq_i.fetch_paddr[Config.TagWidth+Config.IndexWidth-1:Config.IndexWidth];
                     miss_o      = en_i;
                     // get way which to replace
                     // only if there is no hit we should fall back to real replacement. If there was a hit then
@@ -306,7 +308,7 @@ module std_icache (
                         state_d = IDLE;
                     end else begin
                         state_d = REDO_REQ;
-                        tag_d = areq_i.fetch_paddr[ICACHE_TAG_WIDTH+ICACHE_INDEX_WIDTH-1:ICACHE_INDEX_WIDTH];
+                        tag_d = areq_i.fetch_paddr[Config.TagWidth+Config.IndexWidth-1:Config.IndexWidth];
                     end
                 end else if (areq_i.fetch_valid) begin
                     state_d = IDLE;
@@ -318,7 +320,7 @@ module std_icache (
             // ~> request a cache-line refill
             REFILL, WAIT_KILLED_REFILL: begin
                 axi_req_o.ar_valid  = 1'b1;
-                axi_req_o.ar.addr[ICACHE_INDEX_WIDTH+ICACHE_TAG_WIDTH-1:0] = {tag_q, vaddr_q[ICACHE_INDEX_WIDTH-1:ICACHE_BYTE_OFFSET], {ICACHE_BYTE_OFFSET{1'b0}}};
+                axi_req_o.ar.addr[Config.IndexWidth+Config.TagWidth-1:0] = {tag_q, vaddr_q[Config.IndexWidth-1:ICACHE_BYTE_OFFSET], {ICACHE_BYTE_OFFSET{1'b0}}};
                 burst_cnt_d = '0;
 
                 if (dreq_i.kill_s2)
@@ -403,7 +405,7 @@ module std_icache (
     end
 
     lzc #(
-        .WIDTH ( ICACHE_SET_ASSOC )
+        .WIDTH ( Config.SetAssoc )
     ) i_lzc (
         .in_i    ( ~way_valid    ),
         .cnt_o   ( repl_invalid  ),
@@ -413,7 +415,7 @@ module std_icache (
     // -----------------
     // Replacement LFSR
     // -----------------
-    lfsr_8bit #(.WIDTH (ICACHE_SET_ASSOC)) i_lfsr (
+    lfsr_8bit #(.WIDTH (Config.SetAssoc)) i_lfsr (
         .clk_i          ( clk_i       ),
         .rst_ni         ( rst_ni      ),
         .en_i           ( update_lfsr ),

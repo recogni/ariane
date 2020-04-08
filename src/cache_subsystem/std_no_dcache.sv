@@ -129,13 +129,13 @@ module std_nbdcache #(
                 // PTW
                 if (req_ports_i[PTW].data_req) begin
                     state_d = SampleTagPTW;
-                    req_d.addr[ariane_pkg::DCACHE_INDEX_WIDTH-1:0] = req_ports_i[PTW].address_index;
+                    req_d.addr[ariane_pkg::DCache.IndexWidth-1:0] = req_ports_i[PTW].address_index;
                     req_d.size = req_ports_i[PTW].data_size;
                     req_ports_o[PTW].data_gnt = 1'b1;
                 // Load
                 end else if (req_ports_i[LOAD].data_req) begin
                     state_d = SampleTagLoad;
-                    req_d.addr[ariane_pkg::DCACHE_INDEX_WIDTH-1:0] = req_ports_i[LOAD].address_index;
+                    req_d.addr[ariane_pkg::DCache.IndexWidth-1:0] = req_ports_i[LOAD].address_index;
                     req_d.size = req_ports_i[LOAD].data_size;
                     req_ports_o[LOAD].data_gnt = 1'b1;
                 // Store
@@ -149,7 +149,7 @@ module std_nbdcache #(
             end
 
             SampleTagPTW: begin
-                req_d.addr[ariane_pkg::DCACHE_TAG_WIDTH+ariane_pkg::DCACHE_INDEX_WIDTH-1:ariane_pkg::DCACHE_INDEX_WIDTH] = req_ports_i[PTW].address_tag;
+                req_d.addr[ariane_pkg::DCache.TagWidth+ariane_pkg::DCache.IndexWidth-1:ariane_pkg::DCache.IndexWidth] = req_ports_i[PTW].address_tag;
 
                 if (req_ports_i[PTW].kill_req) begin
                     state_d = Idle;
@@ -161,7 +161,7 @@ module std_nbdcache #(
             end
 
             SampleTagLoad: begin
-                req_d.addr[ariane_pkg::DCACHE_TAG_WIDTH+ariane_pkg::DCACHE_INDEX_WIDTH-1:ariane_pkg::DCACHE_INDEX_WIDTH] = req_ports_i[LOAD].address_tag;
+                req_d.addr[ariane_pkg::DCache.TagWidth+ariane_pkg::DCache.IndexWidth-1:ariane_pkg::DCache.IndexWidth] = req_ports_i[LOAD].address_tag;
 
                 if (req_ports_i[LOAD].kill_req) begin
                     state_d = Idle;

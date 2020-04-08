@@ -87,6 +87,15 @@ package ariane_soc;
     //  cache config
     Axi64BitCompliant:      1'b1,
     SwapEndianess:          1'b0,
+    ICache:                 '{ LineWidth:  ariane_pkg::ICACHE_LINE_WIDTH, 
+                               SetAssoc:   ariane_pkg::ICACHE_SET_ASSOC, 
+                               IndexWidth: ariane_pkg::ICACHE_INDEX_WIDTH, 
+                               TagWidth:   ariane_pkg::ICACHE_TAG_WIDTH},
+    DCache:                 '{ LineWidth:  ariane_pkg::DCACHE_LINE_WIDTH, 
+                               SetAssoc:   ariane_pkg::DCACHE_SET_ASSOC, 
+                               IndexWidth: ariane_pkg::DCACHE_INDEX_WIDTH, 
+                               TagWidth:   ariane_pkg::DCACHE_TAG_WIDTH },
+
     // debug
     DmBaseAddress:          DebugBase
   };

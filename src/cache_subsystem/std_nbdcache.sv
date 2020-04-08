@@ -16,6 +16,7 @@ import ariane_pkg::*;
 import std_cache_pkg::*;
 
 module std_nbdcache #(
+    parameter ariane_pkg::cache_cfg_t Config,
     parameter logic [63:0] CACHE_START_ADDR = 64'h8000_0000
 )(
     input  logic                           clk_i,       // Clock
@@ -45,16 +46,16 @@ module std_nbdcache #(
     // 2. PTW
     // 3. Load Unit
     // 4. Store unit
-    logic        [3:0][DCACHE_SET_ASSOC-1:0]  req;
-    logic        [3:0][DCACHE_INDEX_WIDTH-1:0]addr;
+    logic        [3:0][Config.SetAssoc-1:0]   req;
+    logic        [3:0][Config.IndexWidth-1:0] addr;
     logic        [3:0]                        gnt;
-    cache_line_t [DCACHE_SET_ASSOC-1:0]       rdata;
-    logic        [3:0][DCACHE_TAG_WIDTH-1:0]  tag;
+    cache_line_t [Config.SetAssoc-1:0]        rdata;
+    logic        [3:0][Config.TagWidth-1:0]   tag;
 
     cache_line_t [3:0]                        wdata;
     logic        [3:0]                        we;
     cl_be_t      [3:0]                        be;
-    logic        [DCACHE_SET_ASSOC-1:0]       hit_way;
+    logic        [Config.SetAssoc-1:0]        hit_way;
     // -------------------------------
     // Controller <-> Miss unit
     // -------------------------------
@@ -75,11 +76,11 @@ module std_nbdcache #(
     // -------------------------------
     // Arbiter <-> Datram,
     // -------------------------------
-    logic [DCACHE_SET_ASSOC-1:0]         req_ram;
-    logic [DCACHE_INDEX_WIDTH-1:0]       addr_ram;
+    logic [Config.SetAssoc-1:0]          req_ram;
+    logic [Config.IndexWidth-1:0]        addr_ram;
     logic                                we_ram;
     cache_line_t                         wdata_ram;
-    cache_line_t [DCACHE_SET_ASSOC-1:0]  rdata_ram;
+    cache_line_t [Config.SetAssoc-1:0]   rdata_ram;
     cl_be_t                              be_ram;
 
     // ------------------
@@ -88,6 +89,7 @@ module std_nbdcache #(
     generate
         for (genvar i = 0; i < 3; i++) begin : master_ports
             cache_ctrl  #(
+                .Config                ( Config               ),
                 .CACHE_START_ADDR      ( CACHE_START_ADDR     )
             ) i_cache_ctrl (
                 .bypass_i              ( ~enable_i            ),
@@ -127,6 +129,7 @@ module std_nbdcache #(
     // Miss Handling Unit
     // ------------------
     miss_handler #(
+        .Config(Config),
         .NR_PORTS               ( 3                    )
     ) i_miss_handler (
         .flush_i                ( flush_i              ),
@@ -163,15 +166,15 @@ module std_nbdcache #(
     // --------------
     // Memory Arrays
     // --------------
-    for (genvar i = 0; i < DCACHE_SET_ASSOC; i++) begin : sram_block
+    for (genvar i = 0; i < Config.SetAssoc; i++) begin : sram_block
         sram #(
-            .DATA_WIDTH ( DCACHE_LINE_WIDTH                 ),
+            .DATA_WIDTH ( Config.LineWidth                 ),
             .NUM_WORDS  ( DCACHE_NUM_WORDS                  )
         ) data_sram (
             .req_i   ( req_ram [i]                          ),
             .rst_ni  ( rst_ni                               ),
             .we_i    ( we_ram                               ),
-            .addr_i  ( addr_ram[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET]  ),
+            .addr_i  ( addr_ram[Config.IndexWidth-1:DCACHE_BYTE_OFFSET]  ),
             .wdata_i ( wdata_ram.data                       ),
             .be_i    ( be_ram.data                          ),
             .rdata_o ( rdata_ram[i].data                    ),
@@ -179,13 +182,13 @@ module std_nbdcache #(
         );
 
         sram #(
-            .DATA_WIDTH ( DCACHE_TAG_WIDTH                  ),
+            .DATA_WIDTH ( Config.TagWidth                  ),
             .NUM_WORDS  ( DCACHE_NUM_WORDS                  )
         ) tag_sram (
             .req_i   ( req_ram [i]                          ),
             .rst_ni  ( rst_ni                               ),
             .we_i    ( we_ram                               ),
-            .addr_i  ( addr_ram[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET]  ),
+            .addr_i  ( addr_ram[Config.IndexWidth-1:DCACHE_BYTE_OFFSET]  ),
             .wdata_i ( wdata_ram.tag                        ),
             .be_i    ( be_ram.tag                           ),
             .rdata_o ( rdata_ram[i].tag                     ),
@@ -203,7 +206,7 @@ module std_nbdcache #(
     // you can use it here to save the extra 4x overhead introduced by this workaround.
     logic [4*DCACHE_DIRTY_WIDTH-1:0] dirty_wdata, dirty_rdata;
 
-    for (genvar i = 0; i < DCACHE_SET_ASSOC; i++) begin
+    for (genvar i = 0; i < Config.SetAssoc; i++) begin
         assign dirty_wdata[8*i]   = wdata_ram.dirty;
         assign dirty_wdata[8*i+1] = wdata_ram.valid;
         assign rdata_ram[i].dirty = dirty_rdata[8*i];
@@ -218,7 +221,7 @@ module std_nbdcache #(
         .rst_ni  ( rst_ni                              ),
         .req_i   ( |req_ram                            ),
         .we_i    ( we_ram                              ),
-        .addr_i  ( addr_ram[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET] ),
+        .addr_i  ( addr_ram[Config.IndexWidth-1:DCACHE_BYTE_OFFSET] ),
         .wdata_i ( dirty_wdata                         ),
         .be_i    ( be_ram.vldrty                       ),
         .rdata_o ( dirty_rdata                         )
@@ -229,8 +232,8 @@ module std_nbdcache #(
     // ------------------------------------------------
     tag_cmp #(
         .NR_PORTS           ( 4                  ),
-        .ADDR_WIDTH         ( DCACHE_INDEX_WIDTH ),
-        .DCACHE_SET_ASSOC   ( DCACHE_SET_ASSOC   )
+        .ADDR_WIDTH         ( Config.IndexWidth  ),
+        .DCACHE_SET_ASSOC   ( Config.SetAssoc    )
     ) i_tag_cmp (
         .req_i              ( req         ),
         .gnt_o              ( gnt         ),
@@ -255,7 +258,7 @@ module std_nbdcache #(
 //pragma translate_off
     initial begin
         assert ($bits(axi_data_o.aw.addr) == 64) else $fatal(1, "Ariane needs a 64-bit bus");
-        assert (DCACHE_LINE_WIDTH/64 inside {2, 4, 8, 16}) else $fatal(1, "Cache line size needs to be a power of two multiple of 64");
+        assert (Config.LineWidth/64 inside {2, 4, 8, 16}) else $fatal(1, "Cache line size needs to be a power of two multiple of 64");
     end
 //pragma translate_on
 endmodule
