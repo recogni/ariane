@@ -40,7 +40,7 @@ ifeq ($(support_verilator_4), 0)
 endif
 
 ifndef RISCV
-	$(error RISCV not set - please point your RISCV variable to your RISCV installation)
+$(error RISCV not set - please point your RISCV variable to your RISCV installation)
 endif
 
 
