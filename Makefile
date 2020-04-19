@@ -35,7 +35,7 @@ mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 root-dir := $(dir $(mkfile_path))
 
 support_verilator_4 := $(shell (verilator --version | grep -c 'v4\.'))
-ifeq ($(support_verilator_4),0)
+ifeq ($(support_verilator_4),1)
 	NPROCS:=1
 	OS:=$(shell uname -s)
 
