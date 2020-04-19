@@ -22,7 +22,7 @@ import ariane_pkg::*;
 import wt_cache_pkg::*;
 
 module wt_cache_subsystem #(
-  parameter ariane_pkg::ariane_cfg_t ArianeCfg       = ariane_pkg::ArianeDefaultConfig  // contains cacheable regions
+  parameter ariane_cfg_pkg::ariane_cfg_t ArianeCfg       = ariane_cfg_pkg::ArianeDefaultConfig  // contains cacheable regions
 ) (
   input logic                            clk_i,
   input logic                            rst_ni,

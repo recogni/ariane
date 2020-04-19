@@ -14,7 +14,7 @@
 // Description: Load Unit, takes care of all load requests
 
 module load_unit import ariane_pkg::*; #(
-    parameter ariane_pkg::ariane_cfg_t ArianeCfg = ariane_pkg::ArianeDefaultConfig
+    parameter ariane_cfg_pkg::ariane_cfg_t ArianeCfg = ariane_cfg_pkg::ArianeDefaultConfig
 ) (
     input  logic                     clk_i,    // Clock
     input  logic                     rst_ni,   // Asynchronous reset active low
@@ -79,9 +79,9 @@ module load_unit import ariane_pkg::*; #(
     // should we stall the request e.g.: is it withing a non-cacheable region
     // and the write buffer (in the cache and in the core) is not empty so that we don't forward anything
     // from the write buffer (e.g. it would essentially be cached).
-    assign stall_nc = (~(dcache_wbuffer_empty_i | store_buffer_empty_i) & is_inside_cacheable_regions(ArianeCfg, paddr_i))
+    assign stall_nc = (~(dcache_wbuffer_empty_i | store_buffer_empty_i) & ariane_cfg_pkg::is_inside_cacheable_regions(ArianeCfg, paddr_i))
                     // this guards the load to be executed non-speculatively (we wait until our transaction id is on port 0
-                    | (commit_tran_id_i != lsu_ctrl_i.trans_id & is_inside_nonidempotent_regions(ArianeCfg, paddr_i));
+                    | (commit_tran_id_i != lsu_ctrl_i.trans_id & ariane_cfg_pkg::is_inside_nonidempotent_regions(ArianeCfg, paddr_i));
 
     // ---------------
     // Load Control

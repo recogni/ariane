@@ -135,7 +135,7 @@ package ariane_soc;
       end_addr:   PLICBase     + PLICLength     }
   };
 
-  localparam ariane_pkg::ariane_cfg_t ArianeSocCfg = '{
+  localparam ariane_cfg_pkg::ariane_cfg_t ArianeSocCfg = '{
     RASDepth: 2,
     BTBEntries: 32,
     BHTEntries: 128,

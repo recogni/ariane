@@ -17,7 +17,7 @@
 import ariane_pkg::*;
 
 module frontend #(
-  parameter ariane_pkg::ariane_cfg_t ArianeCfg = ariane_pkg::ArianeDefaultConfig
+  parameter ariane_cfg_pkg::ariane_cfg_t ArianeCfg = ariane_cfg_pkg::ArianeDefaultConfig
 ) (
   input  logic               clk_i,              // Clock
   input  logic               rst_ni,             // Asynchronous reset active low

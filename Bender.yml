@@ -39,6 +39,7 @@ sources:
       CONFIG_L1D_CACHELINE_WIDTH: 128
       CONFIG_L1D_ASSOCIATIVITY:   8
     files:
+        - include/ariane_cfg_pkg.sv
         - deps/register_interface/src/reg_intf_pkg.sv            # interface is not defined in Bender dependency! <-- manually adding
         # dependency rv_plic, not benderized
         # Level 0

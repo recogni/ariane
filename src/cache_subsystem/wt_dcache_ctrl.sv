@@ -17,7 +17,7 @@ import wt_cache_pkg::*;
 
 module wt_dcache_ctrl #(
   parameter logic [CACHE_ID_WIDTH-1:0]  RdTxId    = 1,                              // ID to use for read transactions
-  parameter ariane_pkg::ariane_cfg_t    ArianeCfg = ariane_pkg::ArianeDefaultConfig // contains cacheable regions
+  parameter ariane_cfg_pkg::ariane_cfg_t    ArianeCfg = ariane_cfg_pkg::ArianeDefaultConfig // contains cacheable regions
 ) (
   input  logic                            clk_i,          // Clock
   input  logic                            rst_ni,         // Asynchronous reset active low
@@ -84,7 +84,7 @@ module wt_dcache_ctrl #(
   assign miss_size_o           = (miss_nc_o) ? data_size_q : 3'b111;
 
   // noncacheable if request goes to I/O space, or if cache is disabled
-  assign miss_nc_o = (~cache_en_i) | (~ariane_pkg::is_inside_cacheable_regions(ArianeCfg, {{{64-DCACHE_TAG_WIDTH}{1'b0}}, address_tag_q, {DCACHE_INDEX_WIDTH{1'b0}}}));
+  assign miss_nc_o = (~cache_en_i) | (~ariane_cfg_pkg::is_inside_cacheable_regions(ArianeCfg, {{{64-DCACHE_TAG_WIDTH}{1'b0}}, address_tag_q, {DCACHE_INDEX_WIDTH{1'b0}}}));
 
 
   assign miss_we_o    = '0;

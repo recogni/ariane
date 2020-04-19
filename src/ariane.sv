@@ -15,7 +15,7 @@
 import ariane_pkg::*;
 
 module ariane #(
-  parameter ariane_pkg::ariane_cfg_t ArianeCfg     = ariane_pkg::ArianeDefaultConfig
+  parameter ariane_cfg_pkg::ariane_cfg_t ArianeCfg     = ariane_cfg_pkg::ArianeDefaultConfig
 ) (
   input  logic                         clk_i,
   input  logic                         rst_ni,

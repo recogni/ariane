@@ -20,7 +20,7 @@ module mmu #(
       parameter int unsigned INSTR_TLB_ENTRIES     = 4,
       parameter int unsigned DATA_TLB_ENTRIES      = 4,
       parameter int unsigned ASID_WIDTH            = 1,
-      parameter ariane_pkg::ariane_cfg_t ArianeCfg = ariane_pkg::ArianeDefaultConfig
+      parameter ariane_cfg_pkg::ariane_cfg_t ArianeCfg = ariane_cfg_pkg::ArianeDefaultConfig
 ) (
         input  logic                            clk_i,
         input  logic                            rst_ni,
@@ -244,7 +244,7 @@ module mmu #(
     end
 
     // check for execute flag on memory
-    assign match_any_execute_region = ariane_pkg::is_inside_execute_regions(ArianeCfg, {{64-riscv::PLEN{1'b0}}, icache_areq_o.fetch_paddr});
+    assign match_any_execute_region = ariane_cfg_pkg::is_inside_execute_regions(ArianeCfg, {{64-riscv::PLEN{1'b0}}, icache_areq_o.fetch_paddr});
 
     //-----------------------
     // Data Interface
