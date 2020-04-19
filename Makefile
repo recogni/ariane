@@ -398,7 +398,7 @@ fpga:
 BENDER=tools/bin/bender
 
 # generate the bender vsim compile script
-scripts/compile_vsim.tcl: $(BENDER)
+scripts/compile_vsim.tcl: $(BENDER) Bender.yml
 	@echo "[VSIM]      Generate script: ./scripts/compile_vsim.tcl"
 	echo 'set ROOT [file normalize [file dirname [info script]]/..]' > $@
 	$(BENDER) script vsim \
@@ -431,7 +431,7 @@ $(VERILATOR_SOURCES): Bender.yml tools/bin/bender
 		| sed -n '/axi_mem_if_var_latency.sv/!p' > $@
 
 # generate the bender vivado add_sources script
-fpga/scripts/add_sources.tcl: $(BENDER)
+fpga/scripts/add_sources.tcl: $(BENDER) Bender.yml
 	@echo "[FPGA]      Generate script: ./fpga/scripts/add_sources.tcl"
 	echo $(mkfile_dir)
 	echo 'set ROOT [file normalize [file dirname [info script]]/../..]' > $@
@@ -442,7 +442,7 @@ fpga/scripts/add_sources.tcl: $(BENDER)
 .PHONY: fpga/scripts/add_sources.tcl
 
 # generate sources json file
-scripts/sources.json: $(BENDER)
+scripts/sources.json: $(BENDER) Bender.yml
 	echo "Dumping source list: ./scripts/sources.json"
 	@echo $(mkfile_dir)
 	$(BENDER) sources \
@@ -452,12 +452,11 @@ scripts/sources.json: $(BENDER)
 		--target="spike" \
 		| sed 's:$(mkfile_dir)::g' > $@
 
-.PHONY: scripts/sources.json
 
 # generates the compilation scripts new, use this when there was a change in the source files in `Bender.yml`
 generate-bender: scripts/compile_vsim.tcl fpga/scripts/add_sources.tcl scripts/sources.json 
 
-update-bender: $(BENDER)
+update-bender: $(BENDER) Bender.yml
 	$(BENDER) update
 	$(MAKE) generate-bender
 
