@@ -32,6 +32,12 @@ export_include_dirs:
 sources:
   - defines:
       WT_DCACHE: 1
+      CONFIG_L1I_SIZE:            16384
+      CONFIG_L1I_CACHELINE_WIDTH: 128
+      CONFIG_L1I_ASSOCIATIVITY:   4
+      CONFIG_L1D_SIZE:            32768
+      CONFIG_L1D_CACHELINE_WIDTH: 128
+      CONFIG_L1D_ASSOCIATIVITY:   8
     files:
         - deps/register_interface/src/reg_intf_pkg.sv            # interface is not defined in Bender dependency! <-- manually adding
         # dependency rv_plic, not benderized
