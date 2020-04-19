@@ -245,10 +245,10 @@ check-benchmarks:
 	ci/check-tests.sh tmp/riscv-benchmarks- $(shell wc -l $(riscv-benchmarks-list) | awk -F " " '{ print $1 }')
 
 # verilator-specific
-verilate_sources := $(shell less scripts/verilate_sources.txt)
+VERILATOR_SOURCES := scripts/verilate_sources.txt
 
 verilate_command := $(verilator)                                                                                 \
-					$(verilate_sources)                                                                          \
+					-f $(VERILATOR_SOURCES)                                                                      \
 					$(if $(verilator_threads), --threads $(verilator_threads))                                   \
 					--unroll-count 256                                                                           \
 					-Werror-PINMISSING                                                                           \
@@ -275,7 +275,7 @@ verilate-test:
 	echo $(verilate_command)
 
 # User Verilator, at some point in the future this will be auto-generated
-verilate: scripts/verilate_sources.txt
+verilate: $(VERILATOR_SOURCES) 
 	@echo "[Verilator] Building Model$(if $(PROFILE), for Profiling,)"
 	$(verilate_command)
 	cd $(ver-library) && $(MAKE) -j${NUM_JOBS} -f Variane_testharness.mk
@@ -421,16 +421,14 @@ $(BENDER):
 	mkdir -p tools
 	(cd tools && cargo install --root . bender)
 
-scripts/verilate_sources.txt: Bender.yml tools/bin/bender
-	@echo "[VERILATOR] Generate script: ./scripts/verilate_sources.txt"
+$(VERILATOR_SOURCES): Bender.yml tools/bin/bender 
+	@echo "[VERILATOR] Generate script: $(VERILATOR_SOURCES)"
 	echo $(mkfile_dir)
 	$(BENDER) script verilator \
 		--target="ariane_test" \
 		| sed 's:$(mkfile_dir)::g' \
 		| sed -n '/tc_clk.sv/!p' \
 		| sed -n '/axi_mem_if_var_latency.sv/!p' > $@
-
-.PHONY: scripts/verilate_sources.txt
 
 # generate the bender vivado add_sources script
 fpga/scripts/add_sources.tcl: $(BENDER)
@@ -457,7 +455,7 @@ scripts/sources.json: $(BENDER)
 .PHONY: scripts/sources.json
 
 # generates the compilation scripts new, use this when there was a change in the source files in `Bender.yml`
-generate-bender: scripts/compile_vsim.tcl fpga/scripts/add_sources.tcl scripts/sources.json scripts/verilate_sources.txt
+generate-bender: scripts/compile_vsim.tcl fpga/scripts/add_sources.tcl scripts/sources.json 
 
 update-bender: $(BENDER)
 	$(BENDER) update
@@ -469,7 +467,8 @@ build-spike:
 clean:
 	rm -rf $(riscv-torture-dir)/output/test*
 	rm -rf $(library)/ $(dpi-library)/ $(ver-library)/
-	rm -f tmp/*.ucdb tmp/*.log *.wlf *vstf wlft* *.ucdb
+	rm -f tmp/*.ucdb tmp/*.log *.wlf *vstf wlft* *.ucdb \
+	rm -f scripts/verilate_sources.txt
 
 .PHONY:
 	build sim sim-verilate clean                                              \
