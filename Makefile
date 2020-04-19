@@ -34,9 +34,20 @@ BOARD          ?= genesys2
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 root-dir := $(dir $(mkfile_path))
 
-support_verilator_4 := $(shell (verilator --version | grep '4\.') &> /dev/null; echo $$?)
-ifeq ($(support_verilator_4), 0)
-	verilator_threads := 2
+support_verilator_4 := $(shell (verilator --version | grep -c 'v4\.'))
+ifeq ($(support_verilator_4),0)
+	NPROCS:=1
+	OS:=$(shell uname -s)
+
+	ifeq ($(OS),Linux)
+	NPROCS:=$(shell grep -c ^processor /proc/cpuinfo)
+	endif
+
+	ifeq ($(OS),Darwin) 
+	NPROCS:=$(shell system_profiler | awk '/Number Of CPUs/{print $4}{next;}')
+	endif
+
+	verilator_threads := $(NPROCS)
 endif
 
 ifndef RISCV
@@ -264,7 +275,7 @@ verilate-test:
 	echo $(verilate_command)
 
 # User Verilator, at some point in the future this will be auto-generated
-verilate:
+verilate: scripts/verilate_sources.txt
 	@echo "[Verilator] Building Model$(if $(PROFILE), for Profiling,)"
 	$(verilate_command)
 	cd $(ver-library) && $(MAKE) -j${NUM_JOBS} -f Variane_testharness.mk
@@ -384,11 +395,13 @@ fpga:
 
 .PHONY: fpga
 
+BENDER=tools/bin/bender
+
 # generate the bender vsim compile script
-scripts/compile_vsim.tcl:
+scripts/compile_vsim.tcl: $(BENDER)
 	@echo "[VSIM]      Generate script: ./scripts/compile_vsim.tcl"
 	echo 'set ROOT [file normalize [file dirname [info script]]/..]' > $@
-	bender script vsim \
+	$(BENDER) script vsim \
 		--target="rtl" \
 		--target="ariane_test" \
 		--target="test" \
@@ -402,10 +415,16 @@ scripts/compile_vsim.tcl:
 # generate the bender verilator sources list
 # `deps/tech_cells_generic/src/rtl/tc_clk.sv` and `deps/axi_mem_if/src/deprecated/axi_mem_if_var_latency.sv`
 # are crashing verilator, are not needed in ariane -> filter out of verilator sources
-scripts/verilate_sources.txt:
+
+$(BENDER):
+	@echo "[Cargo]		Installing bender"
+	mkdir -p tools
+	(cd tools && cargo install --root . bender)
+
+scripts/verilate_sources.txt: Bender.yml tools/bin/bender
 	@echo "[VERILATOR] Generate script: ./scripts/verilate_sources.txt"
 	echo $(mkfile_dir)
-	bender script verilator \
+	$(BENDER) script verilator \
 		--target="ariane_test" \
 		| sed 's:$(mkfile_dir)::g' \
 		| sed -n '/tc_clk.sv/!p' \
@@ -414,21 +433,21 @@ scripts/verilate_sources.txt:
 .PHONY: scripts/verilate_sources.txt
 
 # generate the bender vivado add_sources script
-fpga/scripts/add_sources.tcl:
+fpga/scripts/add_sources.tcl: $(BENDER)
 	@echo "[FPGA]      Generate script: ./fpga/scripts/add_sources.tcl"
 	echo $(mkfile_dir)
 	echo 'set ROOT [file normalize [file dirname [info script]]/../..]' > $@
-	bender script vivado \
+	$(BENDER) script vivado \
 		--target=$(BOARD) \
 		| grep -v '^set ROOT' >> $@
 
 .PHONY: fpga/scripts/add_sources.tcl
 
 # generate sources json file
-scripts/sources.json:
+scripts/sources.json: $(BENDER)
 	echo "Dumping source list: ./scripts/sources.json"
 	@echo $(mkfile_dir)
-	bender sources \
+	$(BENDER) sources \
 		--flatten \
 		--target="ariane_test" \
 		--target="test" \
@@ -440,8 +459,8 @@ scripts/sources.json:
 # generates the compilation scripts new, use this when there was a change in the source files in `Bender.yml`
 generate-bender: scripts/compile_vsim.tcl fpga/scripts/add_sources.tcl scripts/sources.json scripts/verilate_sources.txt
 
-update-bender:
-	bender update
+update-bender: $(BENDER)
+	$(BENDER) update
 	$(MAKE) generate-bender
 
 build-spike:
