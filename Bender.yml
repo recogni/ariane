@@ -10,8 +10,8 @@ dependencies:
     apb_timer:          { git: "https://github.com/pulp-platform/apb_timer.git",          version: 0.1.0                 } # HEAD was Pulpino_v2.1-4-g6c84f69 same as master
     apb_uart:           { git: "https://github.com/pulp-platform/apb_uart.git",           version: 0.1.0                 } # HEAD was here v0.0.1-2-gac3461c same as v0.1.0
     ariane-ethernet:    { git: "https://github.com/lowRISC/ariane-ethernet.git",          rev:     noila_1GHz            } # no tag, position of submodule HEAD : NOT Benderised!!
-    #axi:                { git: "https://github.com/pulp-platform/axi.git",                version: 0.15.0                } # <-- bump to version v0.14.0 from v0.7.0
-    axi:                { git: "https://github.com/pulp-platform/axi.git",                rev: axi_dwc_publish           } # <-- bump to version v0.7.0 from v0.7.0
+    axi:                { git: "https://github.com/pulp-platform/axi.git",                version: 0.18.1                } # <-- bump to version v0.14.0 from v0.7.0
+    #axi:                { git: "https://github.com/pulp-platform/axi.git",                rev: axi_dwc_publish           } # <-- bump to version v0.7.0 from v0.7.0
     axi_mem_if:         { git: "https://github.com/pulp-platform/axi_mem_if.git",         version: 0.2.1                 } # <-- bump to version v.0.2.1 from v0.1.2-4-g4650ca9
     axi_riscv_atomics:  { git: "https://github.com/pulp-platform/axi_riscv_atomics.git",  version: 0.2.2                 } # was @ master, equal to version 0.2.2
     common_cells:       { git: "https://github.com/pulp-platform/common_cells.git",       version: 1.16.1                } # <-- bump to version v1.16.1 from vega_v1.10.0-52-g790f238
