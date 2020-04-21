@@ -398,11 +398,12 @@ fpga:
 BENDER=tools/bin/bender
 
 # generate the bender vsim compile script
-scripts/compile_vsim.tcl: $(BENDER)
+scripts/compile_vsim.tcl: $(BENDER) Bender.yml
 	@echo "[VSIM]      Generate script: ./scripts/compile_vsim.tcl"
 	echo 'set ROOT [file normalize [file dirname [info script]]/..]' > $@
 	$(BENDER) script vsim \
 		--target="rtl" \
+		--target="ariane_core" \
 		--target="ariane_test" \
 		--target="test" \
 		--target="spike" \
@@ -425,6 +426,7 @@ $(VERILATOR_SOURCES): Bender.yml tools/bin/bender
 	@echo "[VERILATOR] Generate script: $(VERILATOR_SOURCES)"
 	echo $(mkfile_dir)
 	$(BENDER) script verilator \
+		--target="ariane_core" \
 		--target="ariane_test" \
 		| sed 's:$(mkfile_dir)::g' \
 		| sed -n '/tc_clk.sv/!p' \
@@ -436,6 +438,7 @@ fpga/scripts/add_sources.tcl: $(BENDER)
 	echo $(mkfile_dir)
 	echo 'set ROOT [file normalize [file dirname [info script]]/../..]' > $@
 	$(BENDER) script vivado \
+		--target="ariane_core" \
 		--target=$(BOARD) \
 		| grep -v '^set ROOT' >> $@
 
@@ -447,6 +450,7 @@ scripts/sources.json: $(BENDER)
 	@echo $(mkfile_dir)
 	$(BENDER) sources \
 		--flatten \
+		--target="ariane_core" \
 		--target="ariane_test" \
 		--target="test" \
 		--target="spike" \
