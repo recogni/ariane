@@ -29,8 +29,8 @@ package ariane_axi;
     localparam StrbWidth   = DataWidth / 8;
     localparam StrbWidth32 = DataWidth32 / 8;
 
-    typedef logic [ariane_soc::IdWidth-1:0]      id_t;
-    typedef logic [ariane_soc::IdWidthSlave-1:0] id_slv_t;
+    typedef logic [`ARIANE_AXI_ID_WIDTH-1:0]       id_t;
+    typedef logic [`ARIANE_AXI_ID_WIDTH_SLAVE-1:0] id_slv_t;
     typedef logic [AddrWidth-1:0]   addr_t;
     typedef logic [DataWidth-1:0]   data_t;
     typedef logic [DataWidth32-1:0] data_32_t;
